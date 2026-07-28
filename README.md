@@ -1,6 +1,6 @@
-# Luc.ia Voice Service v3
+# Luc.ia Voice Service
 
-Este es el servicio de backend de voz de tercera generación para el ecosistema Luc.ia. Actúa como un puente entre aplicaciones cliente, el agente de OpenClaw y los servicios de procesamiento de lenguaje natural (STT/TTS).
+Este es el servicio de backend de voz para el ecosistema Luc.ia. Actúa como un puente entre aplicaciones cliente, el agente de OpenClaw y los servicios de procesamiento de lenguaje natural (STT/TTS).
 
 ## Arquitectura
 
@@ -21,13 +21,13 @@ El servicio está diseñado para ser extremadamente ligero al delegar el procesa
 Para que el servicio se inicie automáticamente con el sistema:
 
 ```bash
-# Copiar el archivo de servicio
-sudo cp /opt/lucia-voice-service-v3/lucia-voice-v3.service /etc/systemd/system/
+# Copiar la unidad de usuario
+mkdir -p ~/.config/systemd/user
+cp /opt/lucia-voice-service/lucia-voice-service.service ~/.config/systemd/user/
 
-# Activar y arrancar
-sudo systemctl daemon-reload
-sudo systemctl enable lucia-voice-v3
-sudo systemctl start lucia-voice-v3
+# Recargar, activar y arrancar
+systemctl --user daemon-reload
+systemctl --user enable --now lucia-voice-service
 ```
 
 ## API Documentation
