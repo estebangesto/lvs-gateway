@@ -15,20 +15,64 @@ El servicio está diseñado para ser extremadamente ligero al delegar el procesa
 *   Servicio `lucia-stt` activo y escuchando en el socket.
 *   Conexión a internet y credenciales de ElevenLabs para TTS.
 *   OpenClaw Gateway activo (por defecto en el puerto 18789).
+*   Python 3.13.
 
-## Instalación como Servicio de Linux
+## Instalación y despliegue
 
-Para que el servicio se inicie automáticamente con el sistema:
+El servicio se ejecuta desde `/opt/lucia-voice-service` y utiliza una unidad
+de **systemd de usuario**. No copies ni muevas el virtualenv de una instalación
+anterior: los virtualenvs contienen rutas absolutas y no son portables.
+
+### 1. Preparar el checkout y el entorno virtual
 
 ```bash
-# Copiar la unidad de usuario
+git clone git@gitlab-lucia:egesto/lucia-voice-service.git /opt/lucia-voice-service
+cd /opt/lucia-voice-service
+
+python3.13 -m venv venv
+venv/bin/python -m pip install --upgrade pip
+venv/bin/python -m pip install -r requirements.txt
+venv/bin/python -m compileall -q app
+```
+
+Las dependencias están fijadas en `requirements.txt`. No uses un `pip freeze`
+del entorno histórico: puede incluir componentes de STT local que este backend
+ya no utiliza.
+
+### 2. Configurar el entorno local
+
+```bash
+cp .env.example .env
+```
+
+Editá `.env` sólo con valores propios del despliegue. No se versionan `.env`,
+tokens ni claves. Por defecto, el servicio reutiliza los secretos activos de
+OpenClaw para el Gateway y ElevenLabs; `OPENCLAW_API_TOKEN` y
+`ELEVENLABS_API_KEY` se reservan para despliegues autónomos.
+
+`OPENCLAW_SESSION_KEY` identifica la conversación persistente a la que el
+Gateway enruta las solicitudes de voz. Usá una clave estable y distinta para
+cada cliente que deba conservar contexto independiente.
+
+### 3. Instalar y administrar la unidad de usuario
+
+```bash
+# Copiar o actualizar la unidad de usuario
 mkdir -p ~/.config/systemd/user
 cp /opt/lucia-voice-service/lucia-voice-service.service ~/.config/systemd/user/
 
 # Recargar, activar y arrancar
 systemctl --user daemon-reload
 systemctl --user enable --now lucia-voice-service
+
+# Verificar estado y consultar logs
+systemctl --user status lucia-voice-service
+journalctl --user -u lucia-voice-service -f
 ```
+
+Para actualizar el servicio, obtené la versión deseada del repositorio,
+reinstalá las dependencias si cambió `requirements.txt`, copiá de nuevo la
+unidad si cambió y luego recargá systemd antes de reiniciar el servicio.
 
 ## API Documentation
 
