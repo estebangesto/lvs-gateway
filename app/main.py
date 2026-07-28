@@ -23,11 +23,11 @@ async def lifespan(_: FastAPI):
     await tts_service.close()
 
 
-app = FastAPI(title="Luc.ia Voice Service v3 API", lifespan=lifespan)
+app = FastAPI(title="Luc.ia Voice Service API", lifespan=lifespan)
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "service": "lucia-voice-v3"}
+    return {"status": "ok", "service": "lucia-voice-service"}
 
 @app.post("/voice/transcribe")
 async def transcribe_voice(audio: UploadFile = File(...)):
