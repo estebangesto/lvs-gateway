@@ -44,7 +44,7 @@ class TextToSpeech:
 
     async def synthesize_stream(self, text: str) -> AsyncIterator[bytes]:
         self._ensure_configured()
-        audio_text = text.replace("Luc.ia", "Lucía").replace("Esteban", "Estéban")
+        audio_text = text.replace("LVS", "assistant").replace("Esteban", "Estéban")
         url = f"{self.api_base}/v1/text-to-speech/{self.voice_id}/stream"
         payload = {
             "text": audio_text,

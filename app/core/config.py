@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     OPENCLAW_SECRET_FILE: str = "/home/esteban/.openclaw/secrets.json"
     OPENCLAW_TOKEN_SECRET_ID: str = "GATEWAY_AUTH_TOKEN"
     OPENCLAW_AGENT_ID: str = "main"
-    OPENCLAW_SESSION_KEY: str = "lucia-desktop"
+    OPENCLAW_SESSION_KEY: str = "lvs-desktop"
 
     # ElevenLabs TTS. Prefer the active OpenClaw secret store so the service
     # does not keep a second plaintext copy of the API key. An environment
@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     ELEVENLABS_API_BASE: str = "https://api.elevenlabs.io"
 
     # Local persistent STT worker.
-    STT_SOCKET_PATH: str = f"/run/user/{os.getuid()}/lucia-stt.sock"
+    STT_SOCKET_PATH: str = f"/run/user/{os.getuid()}/lvs-stt.sock"
 
     class Config:
         env_file = ".env"

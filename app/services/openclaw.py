@@ -78,7 +78,7 @@ class OpenClawService:
             "stream": stream,
         }
 
-    async def ask_lucia_stream(self, message: str) -> AsyncGenerator[str, None]:
+    async def ask_agent_stream(self, message: str) -> AsyncGenerator[str, None]:
         url = f"{self.base_url}/v1/responses"
         payload = self._build_payload(message, stream=True)
         current_event: str | None = None
@@ -126,7 +126,7 @@ class OpenClawService:
 
     async def send_message(self, message: str) -> str:
         chunks: list[str] = []
-        async for chunk in self.ask_lucia_stream(message):
+        async for chunk in self.ask_agent_stream(message):
             if chunk:
                 chunks.append(chunk)
 

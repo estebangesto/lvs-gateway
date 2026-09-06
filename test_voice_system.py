@@ -12,7 +12,7 @@ async def run_test():
     tts = TextToSpeech()
     stt = SpeechToText()
     
-    test_text = "Hola, soy Lucía. Esta es una prueba para verificar que el sistema de voz y transcripción funciona correctamente."
+    test_text = "Hola, soy assistant. Esta es una prueba para verificar que el sistema de voz y transcripción funciona correctamente."
     temp_audio = "test_integration.mp3"
     
     try:

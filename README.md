@@ -1,33 +1,33 @@
-# Luc.ia Voice Service
+# LVS Gateway
 
-Este es el servicio de backend de voz para el ecosistema Luc.ia. Actúa como un puente entre aplicaciones cliente, el agente de OpenClaw y los servicios de procesamiento de lenguaje natural (STT/TTS).
+Este es el servicio de backend de voz para el ecosistema LVS. Actúa como un puente entre aplicaciones cliente, el agente de OpenClaw y los servicios de procesamiento de lenguaje natural (STT/TTS).
 
 ## Arquitectura
 
 El servicio está diseñado para ser extremadamente ligero al delegar el procesamiento pesado a otros servicios especializados:
 
-1.  **Speech-to-Text (STT):** Delega la transcripción al servicio `lucia-stt` a través de un Unix Socket (`/run/user/1000/lucia-stt.sock`), evitando cargar modelos de IA en este proceso.
+1.  **Speech-to-Text (STT):** Delega la transcripción al servicio `lvs-stt` a través de un Unix Socket (`/run/user/1000/lvs-stt.sock`), evitando cargar modelos de IA en este proceso.
 2.  **Text-to-Speech (TTS):** Utiliza la API de ElevenLabs. El cliente HTTP se mantiene dentro del proceso para reutilizar conexiones.
 3.  **Cerebro (OpenClaw):** Se comunica con el endpoint HTTP OpenResponses (`POST /v1/responses`) del Gateway, consumiendo su respuesta SSE internamente.
 
 ## Requisitos
 
-*   Servicio `lucia-stt` activo y escuchando en el socket.
+*   Servicio `lvs-stt` activo y escuchando en el socket.
 *   Conexión a internet y credenciales de ElevenLabs para TTS.
 *   OpenClaw Gateway activo (por defecto en el puerto 18789).
 *   Python 3.13.
 
 ## Instalación y despliegue
 
-El servicio se ejecuta desde `/opt/lucia-voice-service` y utiliza una unidad
+El servicio se ejecuta desde `/opt/lvs-gateway` y utiliza una unidad
 de **systemd de usuario**. No copies ni muevas el virtualenv de una instalación
 anterior: los virtualenvs contienen rutas absolutas y no son portables.
 
 ### 1. Preparar el checkout y el entorno virtual
 
 ```bash
-git clone git@gitlab-lucia:egesto/lucia-voice-service.git /opt/lucia-voice-service
-cd /opt/lucia-voice-service
+git clone git@gitlab-lucia:egesto/lvs-gateway.git /opt/lvs-gateway
+cd /opt/lvs-gateway
 
 python3.13 -m venv venv
 venv/bin/python -m pip install --upgrade pip
@@ -59,15 +59,15 @@ cada cliente que deba conservar contexto independiente.
 ```bash
 # Copiar o actualizar la unidad de usuario
 mkdir -p ~/.config/systemd/user
-cp /opt/lucia-voice-service/lucia-voice-service.service ~/.config/systemd/user/
+cp /opt/lvs-gateway/lvs-gateway.service ~/.config/systemd/user/
 
 # Recargar, activar y arrancar
 systemctl --user daemon-reload
-systemctl --user enable --now lucia-voice-service
+systemctl --user enable --now lvs-gateway
 
 # Verificar estado y consultar logs
-systemctl --user status lucia-voice-service
-journalctl --user -u lucia-voice-service -f
+systemctl --user status lvs-gateway
+journalctl --user -u lvs-gateway -f
 ```
 
 Para actualizar el servicio, obtené la versión deseada del repositorio,
@@ -93,8 +93,8 @@ Envía audio o texto para obtener una respuesta del agente.
 *   `tts` (opcional): controla la síntesis. Por defecto, las solicitudes de texto no generan audio y las solicitudes de voz sí.
 
 **Lógica de respuesta:**
-*   Si envías **audio**: El sistema transcribe, envía a Luc.ia, y devuelve la respuesta en **texto y audio** (Base64).
-*   Si envías **texto**: El sistema envía a Luc.ia y devuelve la respuesta solo en **texto**.
+*   Si envías **audio**: El sistema transcribe, envía el texto al agente configurado y devuelve la respuesta en **texto y audio** (Base64).
+*   Si envías **texto**: El sistema envía el texto al agente configurado y devuelve la respuesta solo en **texto**.
 
 ### 3. Transcribir antes de procesar
 `POST /voice/transcribe`
@@ -106,7 +106,7 @@ el mensaje al agente.
 **Ejemplo de Respuesta JSON:**
 ```json
 {
-  "input_text": "Hola Lucía, ¿cómo estás?",
+  "input_text": "Hola, ¿cómo estás?",
   "response_text": "¡Hola! Estoy muy bien, ¿en qué puedo ayudarte?",
   "response_audio_b64": "UklGRuS...",
   "format": "mp3"

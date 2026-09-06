@@ -1,0 +1,14 @@
+[Unit]
+Description=LVS Voice Service (FastAPI + OpenClaw + ElevenLabs)
+After=network-online.target lvs-stt.service
+
+[Service]
+WorkingDirectory=/opt/lvs-gateway
+Environment="PATH=/opt/lvs-gateway/venv/bin"
+ExecStart=/opt/lvs-gateway/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8001 --workers 1
+
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

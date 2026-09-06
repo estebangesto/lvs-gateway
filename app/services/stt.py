@@ -19,7 +19,7 @@ class SpeechToText:
 
     def _transcribe_via_socket(self, audio_path: str) -> str:
         """
-        Sends a transcription request to the local lucia-stt service.
+        Sends a transcription request to the local lvs-stt service.
         """
         if not os.path.exists(self.socket_path):
             logger.error(f"[STT] Socket no encontrado: {self.socket_path}")

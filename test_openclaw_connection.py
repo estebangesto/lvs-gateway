@@ -13,7 +13,7 @@ logging.basicConfig(
 async def test_openclaw():
     service = OpenClawService()
     print("Enviando mensaje de prueba a OpenClaw...")
-    response = await service.send_message("Hola Lucía, ¿estás ahí?")
+    response = await service.send_message("Hola assistant, ¿estás ahí?")
     print(f"Respuesta de OpenClaw: {response}")
 
 if __name__ == "__main__":
