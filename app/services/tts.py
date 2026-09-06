@@ -28,7 +28,7 @@ class TextToSpeech:
 
         try:
             data = json.loads(
-                Path(settings.ELEVENLABS_SECRET_FILE).read_text(encoding="utf-8")
+                Path(settings.ELEVENLABS_SECRET_FILE).expanduser().read_text(encoding="utf-8")
             )
             api_key = data.get("ELEVENLABS_API_KEY", "")
             if isinstance(api_key, str) and api_key:
@@ -44,7 +44,7 @@ class TextToSpeech:
 
     async def synthesize_stream(self, text: str) -> AsyncIterator[bytes]:
         self._ensure_configured()
-        audio_text = text.replace("LVS", "assistant").replace("Esteban", "Estéban")
+        audio_text = text
         url = f"{self.api_base}/v1/text-to-speech/{self.voice_id}/stream"
         payload = {
             "text": audio_text,

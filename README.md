@@ -6,7 +6,7 @@ Este es el servicio de backend de voz para el ecosistema LVS. Actúa como un pue
 
 El servicio está diseñado para ser extremadamente ligero al delegar el procesamiento pesado a otros servicios especializados:
 
-1.  **Speech-to-Text (STT):** Delega la transcripción al servicio `lvs-stt` a través de un Unix Socket (`/run/user/1000/lvs-stt.sock`), evitando cargar modelos de IA en este proceso.
+1.  **Speech-to-Text (STT):** Delega la transcripción al servicio `lvs-stt` a través del socket Unix configurado, evitando cargar modelos de IA en este proceso.
 2.  **Text-to-Speech (TTS):** Utiliza la API de ElevenLabs. El cliente HTTP se mantiene dentro del proceso para reutilizar conexiones.
 3.  **Cerebro (OpenClaw):** Se comunica con el endpoint HTTP OpenResponses (`POST /v1/responses`) del Gateway, consumiendo su respuesta SSE internamente.
 
@@ -19,15 +19,15 @@ El servicio está diseñado para ser extremadamente ligero al delegar el procesa
 
 ## Instalación y despliegue
 
-El servicio se ejecuta desde `/opt/lvs-gateway` y utiliza una unidad
+El servicio se ejecuta desde el directorio elegido para la instalación y utiliza una unidad
 de **systemd de usuario**. No copies ni muevas el virtualenv de una instalación
 anterior: los virtualenvs contienen rutas absolutas y no son portables.
 
 ### 1. Preparar el checkout y el entorno virtual
 
 ```bash
-git clone git@gitlab-lucia:egesto/lvs-gateway.git /opt/lvs-gateway
-cd /opt/lvs-gateway
+git clone https://github.com/<owner>/lvs-gateway.git ~/.local/share/lvs-gateway
+cd ~/.local/share/lvs-gateway
 
 python3.13 -m venv venv
 venv/bin/python -m pip install --upgrade pip
@@ -59,7 +59,7 @@ cada cliente que deba conservar contexto independiente.
 ```bash
 # Copiar o actualizar la unidad de usuario
 mkdir -p ~/.config/systemd/user
-cp /opt/lvs-gateway/lvs-gateway.service ~/.config/systemd/user/
+cp ~/.local/share/lvs-gateway/lvs-gateway.service ~/.config/systemd/user/
 
 # Recargar, activar y arrancar
 systemctl --user daemon-reload

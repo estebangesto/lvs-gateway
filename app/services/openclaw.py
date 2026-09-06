@@ -22,8 +22,8 @@ class OpenClawService:
     def __init__(self):
         self.base_url = self._normalize_base_url(settings.OPENCLAW_API_URL)
         self.token = self._resolve_token()
-        self.session_id = settings.OPENCLAW_SESSION_KEY
         self.agent_id = settings.OPENCLAW_AGENT_ID
+        self.session_id = self._normalize_session_key(settings.OPENCLAW_SESSION_KEY)
         self.client = httpx.AsyncClient(timeout=120.0)
 
     @staticmethod
@@ -31,7 +31,7 @@ class OpenClawService:
         """Prefer the active Gateway secret without copying or logging it."""
         try:
             data = json.loads(
-                Path(settings.OPENCLAW_SECRET_FILE).read_text(encoding="utf-8")
+                Path(settings.OPENCLAW_SECRET_FILE).expanduser().read_text(encoding="utf-8")
             )
             token = data.get(settings.OPENCLAW_TOKEN_SECRET_ID, "")
             if isinstance(token, str) and token:
@@ -40,6 +40,12 @@ class OpenClawService:
             logger.warning("[OpenClaw HTTP] No se pudo leer el token del Gateway: %s", exc)
 
         return settings.OPENCLAW_API_TOKEN
+
+    def _normalize_session_key(self, raw_key: str) -> str:
+        key = raw_key.strip()
+        if key.startswith("agent:"):
+            return key
+        return f"agent:{self.agent_id}:{key}"
 
     def _normalize_base_url(self, raw_url: str) -> str:
         parsed = urlparse(raw_url.strip())
