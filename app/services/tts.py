@@ -1,11 +1,17 @@
+import asyncio
+import base64
+import binascii
 import json
 import logging
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
+from urllib.parse import urlencode, urlsplit, urlunsplit
 
 import httpx
+from websockets.asyncio.client import connect as websocket_connect
+from websockets.exceptions import ConnectionClosed, WebSocketException
 
 from app.core.config import Settings, settings
 
@@ -41,9 +47,10 @@ def _media_type_for_format(output_format: str) -> str:
 
 
 class ElevenLabsProvider:
-    """ElevenLabs adapter for legacy Text-to-Speech and v4 Text-to-Dialogue."""
+    """ElevenLabs adapter for legacy TTS, v4 dialogue and v4 Turbo WebSocket."""
 
     V4_MODEL_ID = "eleven_v4"
+    V4_TURBO_MODEL_ID = "eleven_v4_turbo"
     LEGACY_ONLY_SETTINGS = (
         "ELEVENLABS_STYLE",
         "ELEVENLABS_SPEED",
@@ -95,7 +102,10 @@ class ElevenLabsProvider:
         return ""
 
     def _validate_model_settings(self) -> None:
-        if self.config.ELEVENLABS_MODEL_ID != self.V4_MODEL_ID:
+        if self.config.ELEVENLABS_MODEL_ID not in {
+            self.V4_MODEL_ID,
+            self.V4_TURBO_MODEL_ID,
+        }:
             return
 
         unsupported = [
@@ -106,7 +116,8 @@ class ElevenLabsProvider:
         if unsupported:
             names = ", ".join(unsupported)
             raise ValueError(
-                f"{names} no son compatibles con {self.V4_MODEL_ID}; "
+                f"{names} no son compatibles con "
+                f"{self.config.ELEVENLABS_MODEL_ID}; "
                 "quitá esos ajustes o seleccioná un modelo ElevenLabs 2.5"
             )
 
@@ -167,6 +178,9 @@ class ElevenLabsProvider:
 
     async def synthesize(self, text: str) -> SynthesizedAudio:
         self._ensure_configured()
+        if self.config.ELEVENLABS_MODEL_ID == self.V4_TURBO_MODEL_ID:
+            return await self._synthesize_v4_turbo(text)
+
         endpoint, payload = self._payload(text)
         output_format = self.config.ELEVENLABS_OUTPUT_FORMAT
         headers = {
@@ -206,6 +220,105 @@ class ElevenLabsProvider:
             data=bytes(audio),
             output_format=output_format,
             media_type=media_type,
+        )
+
+    def _dialogue_websocket_url(self) -> str:
+        parsed = urlsplit(self.api_base)
+        scheme = {"https": "wss", "http": "ws"}.get(parsed.scheme)
+        if scheme is None or not parsed.netloc:
+            raise RuntimeError("La URL base de ElevenLabs no permite abrir WebSocket")
+        path = f"{parsed.path.rstrip('/')}/v1/text-to-dialogue/stream-input"
+        query = urlencode(
+            {
+                "model_id": self.V4_TURBO_MODEL_ID,
+                "output_format": self.config.ELEVENLABS_OUTPUT_FORMAT,
+            }
+        )
+        return urlunsplit((scheme, parsed.netloc, path, query, ""))
+
+    async def _synthesize_v4_turbo(self, text: str) -> SynthesizedAudio:
+        """Send one complete text turn and collect Turbo's streamed audio frames."""
+        config = self.config
+        initial_message: dict[str, object] = {
+            "voices": [config.ELEVENLABS_VOICE_ID],
+        }
+        voice_settings = {
+            "stability": config.ELEVENLABS_STABILITY,
+            "similarity_boost": config.ELEVENLABS_SIMILARITY_BOOST,
+        }
+        configured_voice_settings = {
+            key: value for key, value in voice_settings.items()
+            if value is not None
+        }
+        if configured_voice_settings:
+            initial_message["voice_settings"] = configured_voice_settings
+
+        audio = bytearray()
+        try:
+            async with websocket_connect(
+                self._dialogue_websocket_url(),
+                additional_headers={"xi-api-key": self.api_key},
+                open_timeout=10,
+                close_timeout=5,
+            ) as websocket:
+                await websocket.send(json.dumps(initial_message))
+                await websocket.send(
+                    json.dumps(
+                        {
+                            "inputs": [
+                                {
+                                    "text": text,
+                                    "voice_id": config.ELEVENLABS_VOICE_ID,
+                                }
+                            ]
+                        }
+                    )
+                )
+                await websocket.send(json.dumps({"close_socket": True}))
+
+                while True:
+                    try:
+                        raw_message = await asyncio.wait_for(
+                            websocket.recv(), timeout=90
+                        )
+                    except ConnectionClosed:
+                        break
+
+                    message = json.loads(raw_message)
+                    if not isinstance(message, dict):
+                        raise RuntimeError("ElevenLabs devolvió un mensaje inválido")
+                    if message.get("error") or message.get("type") == "error":
+                        raise RuntimeError("ElevenLabs rechazó la síntesis Turbo")
+
+                    encoded_audio = message.get("audio")
+                    if isinstance(encoded_audio, str) and encoded_audio:
+                        try:
+                            audio.extend(base64.b64decode(encoded_audio, validate=True))
+                        except (binascii.Error, ValueError) as exc:
+                            raise RuntimeError(
+                                "ElevenLabs devolvió un fragmento de audio inválido"
+                            ) from exc
+
+                    if message.get("is_final", message.get("isFinal", False)):
+                        break
+        except RuntimeError:
+            raise
+        except (TimeoutError, OSError, WebSocketException) as exc:
+            logger.error(
+                "[TTS] Error en WebSocket de ElevenLabs: %s", type(exc).__name__
+            )
+            raise RuntimeError("No se pudo completar la síntesis ElevenLabs Turbo") from exc
+        except (json.JSONDecodeError, TypeError) as exc:
+            logger.error("[TTS] ElevenLabs devolvió un mensaje WebSocket inválido")
+            raise RuntimeError("ElevenLabs devolvió una respuesta inválida") from exc
+
+        if not audio:
+            raise RuntimeError("ElevenLabs no devolvió audio para la respuesta")
+        output_format = config.ELEVENLABS_OUTPUT_FORMAT
+        return SynthesizedAudio(
+            data=bytes(audio),
+            output_format=output_format,
+            media_type=_media_type_for_format(output_format),
         )
 
     async def synthesize_stream(self, text: str) -> AsyncIterator[bytes]:
