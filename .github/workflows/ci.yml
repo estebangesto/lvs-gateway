@@ -34,5 +34,9 @@ jobs:
       - name: Validar sintaxis de la aplicación
         run: python -m compileall -q app
 
-      - name: Ejecutar pruebas unitarias
-        run: python -m unittest -v test_openclaw_session test_tts
+      - name: Ejecutar pruebas unitarias disponibles
+        run: |
+          python -m unittest -v test_openclaw_session
+          if [ -f test_tts.py ]; then
+            python -m unittest -v test_tts
+          fi

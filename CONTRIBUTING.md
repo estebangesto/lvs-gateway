@@ -42,6 +42,8 @@ La comprobación estática disponible es:
 ```bash
 .venv/bin/python -m compileall -q app
 .venv/bin/python -m unittest -v test_openclaw_session
+# Ejecutar cuando el módulo esté presente en la rama:
+.venv/bin/python -m unittest -v test_tts
 ```
 
 `test_openclaw_session.py` contiene pruebas unitarias que no contactan servicios externos. Los scripts `test_openclaw_connection.py` y `test_voice_system.py` son diagnósticos de integración: requieren servicios y/o credenciales locales y pueden enviar solicitudes reales. Ejecutalos sólo cuando la prueba correspondiente esté preparada.
