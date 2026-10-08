@@ -1,5 +1,8 @@
 import os
 from pathlib import Path
+from typing import Literal
+
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
@@ -22,6 +25,12 @@ class Settings(BaseSettings):
     ELEVENLABS_OUTPUT_FORMAT: str = "mp3_44100_128"
     ELEVENLABS_LANGUAGE_CODE: str = "es"
     ELEVENLABS_API_BASE: str = "https://api.elevenlabs.io"
+    TTS_PROVIDER: Literal["elevenlabs"] = "elevenlabs"
+    ELEVENLABS_STABILITY: float | None = Field(default=None, ge=0, le=1)
+    ELEVENLABS_SIMILARITY_BOOST: float | None = Field(default=None, ge=0, le=1)
+    ELEVENLABS_STYLE: float | None = Field(default=None, ge=0, le=1)
+    ELEVENLABS_SPEED: float | None = Field(default=None, gt=0)
+    ELEVENLABS_USE_SPEAKER_BOOST: bool | None = None
 
     # Local persistent STT worker.
     STT_SOCKET_PATH: str = os.path.join(
