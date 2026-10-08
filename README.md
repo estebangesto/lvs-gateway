@@ -7,7 +7,7 @@ Este es el servicio de backend de voz para el ecosistema LVS. Actúa como un pue
 El servicio está diseñado para ser extremadamente ligero al delegar el procesamiento pesado a otros servicios especializados:
 
 1.  **Speech-to-Text (STT):** Delega la transcripción al servicio `lvs-stt` a través del socket Unix configurado, evitando cargar modelos de IA en este proceso.
-2.  **Text-to-Speech (TTS):** Usa el proveedor configurado en el gateway. ElevenLabs conserva la API Text-to-Speech para los modelos 2.5 y usa Text-to-Dialogue para `eleven_v4`.
+2.  **Text-to-Speech (TTS):** Usa el proveedor configurado en el gateway. ElevenLabs conserva la API Text-to-Speech para los modelos 2.5, usa Text-to-Dialogue HTTP para `eleven_v4` y Text-to-Dialogue WebSocket para `eleven_v4_turbo`.
 3.  **Cerebro (OpenClaw):** Se comunica con el endpoint HTTP OpenResponses (`POST /v1/responses`) del Gateway, consumiendo su respuesta SSE internamente.
 
 ## Requisitos
@@ -131,12 +131,12 @@ curl -X POST http://localhost:8001/voice/process \
 
 Copiá `.env.example` a `.env` y completá los valores. No guardes tokens o claves en el código fuente. `TTS_PROVIDER` selecciona el proveedor de síntesis activo; su valor predeterminado es `elevenlabs`.
 
-- `ELEVENLABS_MODEL_ID`: modelo de ElevenLabs. El valor predeterminado es `eleven_flash_v2_5`; usar `eleven_v4` selecciona Text-to-Dialogue.
+- `ELEVENLABS_MODEL_ID`: modelo de ElevenLabs. El valor predeterminado es `eleven_flash_v2_5`; `eleven_v4` selecciona Text-to-Dialogue HTTP y `eleven_v4_turbo` selecciona Text-to-Dialogue WebSocket.
 - `ELEVENLABS_VOICE_ID`, `ELEVENLABS_OUTPUT_FORMAT` y `ELEVENLABS_LANGUAGE_CODE`: voz, formato solicitado e idioma. El formato predeterminado es `mp3_44100_128`.
-- `ELEVENLABS_STABILITY` y `ELEVENLABS_SIMILARITY_BOOST`: ajustes compatibles con los modelos 2.5 y v4. Para v4 se envían como `stability` y `similarity`.
+- `ELEVENLABS_STABILITY` y `ELEVENLABS_SIMILARITY_BOOST`: ajustes compatibles con los modelos 2.5 y v4. Para v4 se envían como `stability` y `similarity`; Turbo los recibe en `voice_settings` al iniciar la sesión WebSocket.
 - `ELEVENLABS_STYLE`, `ELEVENLABS_SPEED` y `ELEVENLABS_USE_SPEAKER_BOOST`: ajustes de la API legacy 2.5.
 
-Los ajustes opcionales quedan sin enviar cuando no se configuran, preservando el comportamiento actual. Stability, Similarity y Style aceptan números entre `0` y `1`; Speed debe ser mayor que `0`. La API v4 no admite Style, Speed ni Speaker Boost.
+Los ajustes opcionales quedan sin enviar cuando no se configuran, preservando el comportamiento actual. Stability, Similarity y Style aceptan números entre `0` y `1`; Speed debe ser mayor que `0`. Los modelos v4 no admiten Style, Speed ni Speaker Boost.
 
 Por defecto, si `ELEVENLABS_API_KEY` queda vacío, el servicio reutiliza el almacén de secretos de OpenClaw indicado por `ELEVENLABS_SECRET_FILE`; la clave permanece fuera del repositorio.
 
