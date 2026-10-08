@@ -41,11 +41,14 @@ La comprobación estática disponible es:
 
 ```bash
 .venv/bin/python -m compileall -q app
+.venv/bin/python -m unittest -v test_openclaw_session
+# Ejecutar cuando el módulo esté presente en la rama:
+.venv/bin/python -m unittest -v test_tts
 ```
 
-Los scripts `test_openclaw_connection.py`, `test_openclaw_session.py` y `test_voice_system.py` son diagnósticos de integración: requieren servicios y/o credenciales locales y pueden enviar solicitudes reales. Ejecutalos sólo cuando la prueba correspondiente esté preparada; no son una suite aislada para CI.
+`test_openclaw_session.py` contiene pruebas unitarias que no contactan servicios externos. Los scripts `test_openclaw_connection.py` y `test_voice_system.py` son diagnósticos de integración: requieren servicios y/o credenciales locales y pueden enviar solicitudes reales. Ejecutalos sólo cuando la prueba correspondiente esté preparada.
 
-Al momento de adoptar esta guía, el repositorio no tiene workflows de CI ni checks configurados en GitHub. Los PR deben indicar las verificaciones ejecutadas y los riesgos. La integración de cambios de código queda sujeta a que los checks requeridos para la rama destino estén disponibles y pasen; no se debe declarar un check exitoso si no existe.
+El workflow de GitHub Actions ejecuta estas verificaciones para los Pull Requests dirigidos a `develop` o `main`. No usa credenciales ni servicios externos. Los PR deben indicar las verificaciones ejecutadas y los riesgos.
 
 ## Issues y Pull Requests
 
