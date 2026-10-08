@@ -5,14 +5,14 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from app.services.stt import SpeechToText
-from app.services.tts import TextToSpeech
+from app.services.tts import TTSService
 from app.services.openclaw import OpenClawService, OpenClawServiceError
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 stt_service = SpeechToText()
-tts_service = TextToSpeech()
+tts_service = TTSService()
 openclaw_service = OpenClawService()
 
 
@@ -56,6 +56,9 @@ async def process_voice(
     """
     input_text = text.strip() if text else None
     generated_audio_b64 = None
+    generated_audio_format = None
+    generated_audio_media_type = None
+    generated_audio_output_format = None
     is_voice_request = audio is not None
 
     # 1. Procesar Audio si existe
@@ -87,20 +90,23 @@ async def process_voice(
     # 3. Generate audio only when the caller requested it.
     if synthesize_audio and response_text:
         logger.info("Generando audio de respuesta...")
-        audio_out_stream = io.BytesIO()
         try:
-            async for chunk in tts_service.synthesize_stream(response_text):
-                audio_out_stream.write(chunk)
+            synthesized_audio = await tts_service.synthesize(response_text)
         except RuntimeError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
-        
-        generated_audio_b64 = base64.b64encode(audio_out_stream.getvalue()).decode("utf-8")
+
+        generated_audio_b64 = base64.b64encode(synthesized_audio.data).decode("utf-8")
+        generated_audio_format = synthesized_audio.format
+        generated_audio_media_type = synthesized_audio.media_type
+        generated_audio_output_format = synthesized_audio.output_format
 
     return {
         "input_text": input_text,
         "response_text": response_text,
         "response_audio_b64": generated_audio_b64,
-        "format": "mp3" if generated_audio_b64 else None,
+        "format": generated_audio_format,
+        "media_type": generated_audio_media_type,
+        "output_format": generated_audio_output_format,
         "tts_generated": bool(generated_audio_b64),
     }
 
