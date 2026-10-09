@@ -7,7 +7,7 @@ Este es el servicio de backend de voz para el ecosistema LVS. Actúa como un pue
 El servicio está diseñado para ser extremadamente ligero al delegar el procesamiento pesado a otros servicios especializados:
 
 1.  **Speech-to-Text (STT):** Delega la transcripción al servicio `lvs-stt` a través del socket Unix configurado, evitando cargar modelos de IA en este proceso.
-2.  **Text-to-Speech (TTS):** Utiliza la API de ElevenLabs. El cliente HTTP se mantiene dentro del proceso para reutilizar conexiones.
+2.  **Text-to-Speech (TTS):** Usa el proveedor configurado en el gateway. ElevenLabs conserva la API Text-to-Speech para los modelos 2.5, usa Text-to-Dialogue HTTP para `eleven_v4` y Text-to-Dialogue WebSocket para `eleven_v4_turbo`.
 3.  **Cerebro (OpenClaw):** Se comunica con el endpoint HTTP OpenResponses (`POST /v1/responses`) del Gateway, consumiendo su respuesta SSE internamente.
 
 ## Requisitos
@@ -109,7 +109,9 @@ el mensaje al agente.
   "input_text": "Hola, ¿cómo estás?",
   "response_text": "¡Hola! Estoy muy bien, ¿en qué puedo ayudarte?",
   "response_audio_b64": "UklGRuS...",
-  "format": "mp3"
+  "format": "mp3",
+  "media_type": "audio/mpeg",
+  "output_format": "mp3_44100_128"
 }
 ```
 
@@ -125,10 +127,39 @@ curl -X POST http://localhost:8001/voice/process \
 *   `test_voice_system.py`: Script para validar que el TTS y STT local funcionan.
 *   `diag_rpc.py`: Herramienta de diagnóstico para la conexión WebSocket con OpenClaw.
 
-## Configuración
+## Configuración TTS
 
-Copiá `.env.example` a `.env` y completá los valores. No guardes tokens o claves en el código fuente. Por defecto, si `ELEVENLABS_API_KEY` queda vacío, el servicio reutiliza el almacén activo de secretos de OpenClaw indicado por `ELEVENLABS_SECRET_FILE`; así no se duplica la clave.
+Copiá `.env.example` a `.env` y completá los valores. No guardes tokens o claves en el código fuente. `TTS_PROVIDER` selecciona el proveedor de síntesis activo; su valor predeterminado es `elevenlabs`.
 
-La configuración base usa la voz Malena (`p7AwDmKvTdoHTBuueGvP`) y `eleven_flash_v2_5`, elegidos para reducir latencia. Cambiá `ELEVENLABS_MODEL_ID` a `eleven_multilingual_v2` si priorizás estabilidad de voz por sobre velocidad.
+### ElevenLabs
+
+Usá `TTS_PROVIDER=elevenlabs` y elegí la ruta mediante `ELEVENLABS_MODEL_ID`:
+
+| Modelo | API | Configuración |
+|---|---|---|
+| `eleven_flash_v2_5` (predeterminado) | Text-to-Speech HTTP | `ELEVENLABS_VOICE_ID`, `ELEVENLABS_OUTPUT_FORMAT`, `ELEVENLABS_LANGUAGE_CODE` y ajustes legacy. |
+| `eleven_multilingual_v2` | Text-to-Speech HTTP | Misma configuración de la ruta 2.5. |
+| `eleven_v4` | Text-to-Dialogue HTTP | Voz, formato e idioma; admite Stability y Similarity. |
+| `eleven_v4_turbo` | Text-to-Dialogue WebSocket | Voz, formato e idioma; admite Stability y Similarity. |
+
+`ELEVENLABS_OUTPUT_FORMAT` usa por defecto `mp3_44100_128`. `ELEVENLABS_STABILITY` y `ELEVENLABS_SIMILARITY_BOOST` son opcionales. `ELEVENLABS_STYLE`, `ELEVENLABS_SPEED` y `ELEVENLABS_USE_SPEAKER_BOOST` corresponden a la ruta legacy 2.5; no los configures para v4 ni v4 Turbo. Stability, Similarity y Style aceptan valores entre `0` y `1`; Speed debe ser mayor que `0`.
+
+Los ajustes opcionales quedan sin enviar cuando no se configuran, preservando los valores predeterminados del proveedor.
+
+### Microsoft Edge TTS
+
+Para usar Edge, cambiá `TTS_PROVIDER=edge`. No requiere clave de API. Configurá sus parámetros independientes:
+
+| Variable | Valor predeterminado | Uso |
+|---|---|---|
+| `EDGE_TTS_VOICE` | `es-AR-ElenaNeural` | Voz de Edge. |
+| `EDGE_TTS_LANGUAGE_CODE` | `es-AR` | Debe coincidir con el idioma y región de la voz. |
+| `EDGE_TTS_RATE` | `+15%` | Velocidad, expresada como porcentaje con signo. |
+| `EDGE_TTS_PITCH` | `+0Hz` | Tono, expresado en Hz con signo. |
+| `EDGE_TTS_OUTPUT_FORMAT` | `audio-24khz-48kbitrate-mono-mp3` | Formato MP3 fijo que admite `edge-tts`. |
+
+El formato de salida de Edge es fijo en la biblioteca `edge-tts`; el gateway informa `audio/mpeg` y el formato real generado. Para probar una configuración Edge con los valores predeterminados, alcanza con `TTS_PROVIDER=edge`; los valores ElevenLabs permanecen guardados para volver a seleccionarlo.
+
+Por defecto, si `ELEVENLABS_API_KEY` queda vacío, el servicio reutiliza el almacén de secretos de OpenClaw indicado por `ELEVENLABS_SECRET_FILE`; la clave permanece fuera del repositorio.
 
 El servicio usa el Gateway mediante `POST /v1/responses`, con `OPENCLAW_AGENT_ID` y `OPENCLAW_SESSION_KEY` para enrutar la conversación. El Gateway debe tener habilitado el endpoint HTTP compatible. Por defecto toma `GATEWAY_AUTH_TOKEN` del almacén activo de secretos de OpenClaw (`OPENCLAW_SECRET_FILE`), sin duplicarlo en `.env`; `OPENCLAW_API_TOKEN` queda como alternativa para un despliegue autónomo.
