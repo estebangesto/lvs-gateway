@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - "**"
+    tags:
+      - "v*"
   pull_request:
     branches:
       - develop
@@ -27,6 +29,21 @@ jobs:
           python-version: "3.13"
           cache: pip
           cache-dependency-path: requirements.txt
+
+      - name: Validar versión publicada contra el tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          expected = os.environ["RELEASE_TAG"][1:]
+          actual = Path("VERSION").read_text(encoding="utf-8").strip()
+          if actual != expected:
+              raise SystemExit(f"VERSION={actual} no coincide con tag v{expected}")
+          PY
 
       - name: Instalar dependencias
         run: python -m pip install -r requirements.txt
