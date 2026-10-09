@@ -51,7 +51,7 @@ async def process_voice(
     1. Si hay audio, lo transcribe.
     2. Si hay texto (o transcripción), lo envía a OpenClaw.
     3. Obtiene respuesta de OpenClaw.
-    4. Si se solicitó TTS, genera audio de la respuesta con ElevenLabs.
+    4. Si se solicitó TTS, genera audio con el proveedor configurado.
     5. Devuelve JSON con texto y (opcionalmente) audio en base64.
     """
     input_text = text.strip() if text else None

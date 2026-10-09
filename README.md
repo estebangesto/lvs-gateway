@@ -131,12 +131,34 @@ curl -X POST http://localhost:8001/voice/process \
 
 Copiá `.env.example` a `.env` y completá los valores. No guardes tokens o claves en el código fuente. `TTS_PROVIDER` selecciona el proveedor de síntesis activo; su valor predeterminado es `elevenlabs`.
 
-- `ELEVENLABS_MODEL_ID`: modelo de ElevenLabs. El valor predeterminado es `eleven_flash_v2_5`; `eleven_v4` selecciona Text-to-Dialogue HTTP y `eleven_v4_turbo` selecciona Text-to-Dialogue WebSocket.
-- `ELEVENLABS_VOICE_ID`, `ELEVENLABS_OUTPUT_FORMAT` y `ELEVENLABS_LANGUAGE_CODE`: voz, formato solicitado e idioma. El formato predeterminado es `mp3_44100_128`.
-- `ELEVENLABS_STABILITY` y `ELEVENLABS_SIMILARITY_BOOST`: ajustes compatibles con los modelos 2.5 y v4. Para v4 se envían como `stability` y `similarity`; Turbo los recibe en `voice_settings` al iniciar la sesión WebSocket.
-- `ELEVENLABS_STYLE`, `ELEVENLABS_SPEED` y `ELEVENLABS_USE_SPEAKER_BOOST`: ajustes de la API legacy 2.5.
+### ElevenLabs
 
-Los ajustes opcionales quedan sin enviar cuando no se configuran, preservando el comportamiento actual. Stability, Similarity y Style aceptan números entre `0` y `1`; Speed debe ser mayor que `0`. Los modelos v4 no admiten Style, Speed ni Speaker Boost.
+Usá `TTS_PROVIDER=elevenlabs` y elegí la ruta mediante `ELEVENLABS_MODEL_ID`:
+
+| Modelo | API | Configuración |
+|---|---|---|
+| `eleven_flash_v2_5` (predeterminado) | Text-to-Speech HTTP | `ELEVENLABS_VOICE_ID`, `ELEVENLABS_OUTPUT_FORMAT`, `ELEVENLABS_LANGUAGE_CODE` y ajustes legacy. |
+| `eleven_multilingual_v2` | Text-to-Speech HTTP | Misma configuración de la ruta 2.5. |
+| `eleven_v4` | Text-to-Dialogue HTTP | Voz, formato e idioma; admite Stability y Similarity. |
+| `eleven_v4_turbo` | Text-to-Dialogue WebSocket | Voz, formato e idioma; admite Stability y Similarity. |
+
+`ELEVENLABS_OUTPUT_FORMAT` usa por defecto `mp3_44100_128`. `ELEVENLABS_STABILITY` y `ELEVENLABS_SIMILARITY_BOOST` son opcionales. `ELEVENLABS_STYLE`, `ELEVENLABS_SPEED` y `ELEVENLABS_USE_SPEAKER_BOOST` corresponden a la ruta legacy 2.5; no los configures para v4 ni v4 Turbo. Stability, Similarity y Style aceptan valores entre `0` y `1`; Speed debe ser mayor que `0`.
+
+Los ajustes opcionales quedan sin enviar cuando no se configuran, preservando los valores predeterminados del proveedor.
+
+### Microsoft Edge TTS
+
+Para usar Edge, cambiá `TTS_PROVIDER=edge`. No requiere clave de API. Configurá sus parámetros independientes:
+
+| Variable | Valor predeterminado | Uso |
+|---|---|---|
+| `EDGE_TTS_VOICE` | `es-AR-ElenaNeural` | Voz de Edge. |
+| `EDGE_TTS_LANGUAGE_CODE` | `es-AR` | Debe coincidir con el idioma y región de la voz. |
+| `EDGE_TTS_RATE` | `+15%` | Velocidad, expresada como porcentaje con signo. |
+| `EDGE_TTS_PITCH` | `+0Hz` | Tono, expresado en Hz con signo. |
+| `EDGE_TTS_OUTPUT_FORMAT` | `audio-24khz-48kbitrate-mono-mp3` | Formato MP3 fijo que admite `edge-tts`. |
+
+El formato de salida de Edge es fijo en la biblioteca `edge-tts`; el gateway informa `audio/mpeg` y el formato real generado. Para probar una configuración Edge con los valores predeterminados, alcanza con `TTS_PROVIDER=edge`; los valores ElevenLabs permanecen guardados para volver a seleccionarlo.
 
 Por defecto, si `ELEVENLABS_API_KEY` queda vacío, el servicio reutiliza el almacén de secretos de OpenClaw indicado por `ELEVENLABS_SECRET_FILE`; la clave permanece fuera del repositorio.
 
