@@ -76,6 +76,8 @@ Usá Conventional Commits con el tipo normalizado en inglés y una descripción 
 
 Las versiones estables siguen Semantic Versioning. Una funcionalidad compatible incrementa MINOR; una corrección compatible incrementa PATCH; un cambio incompatible incrementa MAJOR. Las versiones publicadas usan un tag anotado `vX.Y.Z` y una GitHub Release asociada.
 
+El archivo `VERSION` es la fuente canónica de versión estable, sin prefijo `v`. En una rama de release debe coincidir con la versión del nombre de rama, el encabezado de `CHANGELOG.md`, el tag `vX.Y.Z` y la GitHub Release.
+
 ### Publicación
 
 1. Creá `release/vX.Y.Z` desde `develop` cuando el alcance esté completo.
@@ -97,4 +99,4 @@ Los hotfixes siguen el mismo procedimiento de publicación desde `main` y deben 
 
 ## Estado de adopción
 
-La versión publicada vigente al preparar esta guía es `v0.1.0`. Se inicializa `develop` desde `main` para el siguiente ciclo, cuyo objetivo declarado es `v0.2.0`. La existencia de una rama o workflow no implica por sí sola que GitHub tenga protecciones o checks requeridos configurados.
+La última versión publicada antes de preparar la release es `v0.1.0`. El ciclo actual prepara `v0.2.0`. La existencia de una rama o workflow no implica por sí sola que GitHub tenga protecciones o checks requeridos configurados.
