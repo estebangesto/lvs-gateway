@@ -1,12 +1,13 @@
 import asyncio
 import base64
 import binascii
+import importlib
 import json
 import logging
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Callable, Protocol
 from urllib.parse import urlencode, urlsplit, urlunsplit
 
 import httpx
@@ -26,6 +27,8 @@ class SynthesizedAudio:
 
     @property
     def format(self) -> str:
+        if self.output_format.endswith("-mp3"):
+            return "mp3"
         return self.output_format.split("_", maxsplit=1)[0]
 
 
@@ -332,6 +335,74 @@ class ElevenLabsProvider:
             await self.client.aclose()
 
 
+class EdgeTTSProvider:
+    """Microsoft Edge TTS adapter using edge-tts' fixed MP3 stream."""
+
+    OUTPUT_FORMAT = "audio-24khz-48kbitrate-mono-mp3"
+
+    def __init__(
+        self,
+        config: Settings = settings,
+        communicate_factory: Callable[..., Any] | None = None,
+    ) -> None:
+        self.config = config
+        self._communicate_factory = communicate_factory
+        self._validate_config()
+
+    def _validate_config(self) -> None:
+        voice_locale = "-".join(self.config.EDGE_TTS_VOICE.split("-")[:2])
+        if voice_locale.lower() != self.config.EDGE_TTS_LANGUAGE_CODE.lower():
+            raise ValueError(
+                "EDGE_TTS_LANGUAGE_CODE debe coincidir con el idioma y región "
+                "de EDGE_TTS_VOICE"
+            )
+        if self.config.EDGE_TTS_OUTPUT_FORMAT != self.OUTPUT_FORMAT:
+            raise ValueError(
+                "edge-tts solo admite EDGE_TTS_OUTPUT_FORMAT="
+                f"{self.OUTPUT_FORMAT}"
+            )
+
+    def _communicate(self, text: str) -> Any:
+        factory = self._communicate_factory
+        if factory is None:
+            edge_tts = importlib.import_module("edge_tts")
+            factory = edge_tts.Communicate
+        return factory(
+            text,
+            self.config.EDGE_TTS_VOICE,
+            rate=self.config.EDGE_TTS_RATE,
+            pitch=self.config.EDGE_TTS_PITCH,
+        )
+
+    async def synthesize(self, text: str) -> SynthesizedAudio:
+        audio = bytearray()
+        try:
+            async for chunk in self._communicate(text).stream():
+                if chunk.get("type") == "audio":
+                    data = chunk.get("data")
+                    if isinstance(data, bytes):
+                        audio.extend(data)
+        except Exception as exc:
+            logger.error(
+                "[TTS] Error comunicando con Microsoft Edge TTS: %s",
+                type(exc).__name__,
+            )
+            raise RuntimeError(
+                "No se pudo completar la síntesis Microsoft Edge TTS"
+            ) from exc
+
+        if not audio:
+            raise RuntimeError("Microsoft Edge TTS no devolvió audio")
+        return SynthesizedAudio(
+            data=bytes(audio),
+            output_format=self.config.EDGE_TTS_OUTPUT_FORMAT,
+            media_type="audio/mpeg",
+        )
+
+    async def close(self) -> None:
+        """edge-tts owns short-lived network sessions inside each stream."""
+
+
 class TTSService:
     """Gateway-owned facade that selects and owns the configured TTS provider."""
 
@@ -344,6 +415,8 @@ class TTSService:
             self.provider = provider
         elif config.TTS_PROVIDER == "elevenlabs":
             self.provider = ElevenLabsProvider(config)
+        elif config.TTS_PROVIDER == "edge":
+            self.provider = EdgeTTSProvider(config)
         else:
             raise ValueError(f"Proveedor TTS no soportado: {config.TTS_PROVIDER}")
 

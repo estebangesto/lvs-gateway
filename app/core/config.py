@@ -25,12 +25,23 @@ class Settings(BaseSettings):
     ELEVENLABS_OUTPUT_FORMAT: str = "mp3_44100_128"
     ELEVENLABS_LANGUAGE_CODE: str = "es"
     ELEVENLABS_API_BASE: str = "https://api.elevenlabs.io"
-    TTS_PROVIDER: Literal["elevenlabs"] = "elevenlabs"
+    TTS_PROVIDER: Literal["elevenlabs", "edge"] = "elevenlabs"
     ELEVENLABS_STABILITY: float | None = Field(default=None, ge=0, le=1)
     ELEVENLABS_SIMILARITY_BOOST: float | None = Field(default=None, ge=0, le=1)
     ELEVENLABS_STYLE: float | None = Field(default=None, ge=0, le=1)
     ELEVENLABS_SPEED: float | None = Field(default=None, gt=0)
     ELEVENLABS_USE_SPEAKER_BOOST: bool | None = None
+
+    # Microsoft Edge TTS has a fixed MP3 output format in edge-tts.
+    EDGE_TTS_VOICE: str = "es-AR-ElenaNeural"
+    EDGE_TTS_LANGUAGE_CODE: str = Field(
+        default="es-AR", pattern=r"^[a-z]{2}-[A-Z]{2}$"
+    )
+    EDGE_TTS_OUTPUT_FORMAT: Literal[
+        "audio-24khz-48kbitrate-mono-mp3"
+    ] = "audio-24khz-48kbitrate-mono-mp3"
+    EDGE_TTS_RATE: str = Field(default="+15%", pattern=r"^[+-]\d+%$")
+    EDGE_TTS_PITCH: str = Field(default="+0Hz", pattern=r"^[+-]\d+Hz$")
 
     # Local persistent STT worker.
     STT_SOCKET_PATH: str = os.path.join(

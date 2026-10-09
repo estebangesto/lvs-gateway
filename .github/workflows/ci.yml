@@ -40,3 +40,6 @@ jobs:
           if [ -f test_tts.py ]; then
             python -m unittest -v test_tts
           fi
+          if [ -f test_edge_tts.py ]; then
+            python -m unittest -v test_edge_tts
+          fi
