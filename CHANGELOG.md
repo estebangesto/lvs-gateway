@@ -4,6 +4,13 @@ Todos los cambios relevantes de LVS Gateway se documentan en este archivo.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-22
+
+### Changed
+
+- Actualiza pip a la versión 26.2.2 o superior en CI y documenta el requisito para instalaciones nuevas y existentes.
+- Mantiene Python 3.13 como runtime; el despliegue de referencia usa Python 3.13.12.
+
 ## [0.2.0] - 2026-10-08
 
 ### Added
