@@ -30,12 +30,16 @@ git clone https://github.com/<owner>/lvs-gateway.git ~/.local/share/lvs-gateway
 cd ~/.local/share/lvs-gateway
 
 python3.13 -m venv venv
-venv/bin/python -m pip install --upgrade pip
+venv/bin/python -m pip install --upgrade "pip>=26.2.2"
 venv/bin/python -m pip install -r requirements.txt
 venv/bin/python -m compileall -q app
 ```
 
-Las dependencias están fijadas en `requirements.txt`. No uses un `pip freeze`
+El proyecto requiere pip 26.2.2 o superior en cada entorno virtual. Para
+actualizar un despliegue existente, ejecutá `venv/bin/python -m pip install
+--upgrade "pip>=26.2.2"` desde el directorio de instalación y verificá con
+`venv/bin/python -m pip --version`. Las dependencias están fijadas en
+`requirements.txt`. No uses un `pip freeze`
 del entorno histórico: puede incluir componentes de STT local que este backend
 ya no utiliza.
 
